@@ -200,7 +200,7 @@
 <h4 id="JVM分类"><a href="#JVM分类" class="headerlink" title="JVM分类"></a>JVM分类</h4><ul>
 <li>Java是直接通过指针进行的程序访问，所以他没有采用句柄的形式操作，这样使得程序的性能更高。</li>
 <li>传统意义上来讲，JVM一共分为三中（虚拟机是一个公共标准）<ul>
-<li>【SUN】从JDK1.2开始使用了HotSpot虚拟机标准（2006年开源、利用C++实现、一些JNI部分使用的是系统提供的C程序实现的、JIT即时编译器）；</li>
+<li>【SUN】从JDK1.2开始使用了HotSpot虚拟机标准（2006年开源、利用C++实现、一些JNI部分使用的是系统提供的C程序实现的、JIT——just in time即时编译器）；</li>
 <li>【BEA】使用了JRockit虚拟机标准，例如：WebLogic；</li>
 <li>【IBM】开发了JVM‘s（J9）虚拟机；</li>
 </ul>
@@ -208,25 +208,107 @@
 <li>Oracle后来通过收购得到了：SUN与BEA，那么Oracle有了两个虚拟机标准（不可能浪费两个研发团队去干同样的事情）；</li>
 </ul>
 <h4 id="HotSpot：Java-version"><a href="#HotSpot：Java-version" class="headerlink" title="HotSpot：Java -version"></a>HotSpot：Java -version</h4><ul>
-<li>获取信息<ul>
+<li><p>获取信息</p>
+<ul>
 <li>java version “11” 2018-09-25</li>
 <li>Java（TM）SE Runtime Environment 18.9（build 11+28）</li>
 <li>Java HostSpot（TM）64-Bit Servere VM 18.9 （build 11+28，mixed mode）</li>
 </ul>
 </li>
-<li>虚拟机提供的三种处理模式<ul>
+<li><p>虚拟机提供的三种处理模式</p>
+<ul>
 <li>混合模式：java -version；</li>
 <li>【禁用JIT】纯解释模式：java -Xint -version；</li>
 <li>纯编译模式：java -Xcomp -version</li>
 </ul>
 </li>
-<li>运行模式：<ul>
+<li><p>运行模式：</p>
+<ul>
 <li>【client】客户端运行：启动速度快，但是中间程序的执行慢，占内存小</li>
 <li>【server】服务端运行：启动速度慢，占用内存多，执行效率高</li>
-<li>修改路径：content</li>
+<li>修改路径：/Libary/Java/JavaVirtualMachines/jdk-11.jdk/Contents/Home/lib/jvm.cfg</li>
+</ul>
+<h4 id="Java内存模型"><a href="#Java内存模型" class="headerlink" title="Java内存模型"></a>Java内存模型</h4></li>
+<li><p>合理的内存模型可以使GC的性能更加强大，不必太大的浪费度武器的性能，从而减少阻塞所带来的的程序性能影响</p>
+<ul>
+<li>例：你现在收拾屋子，基本上我们会有两类收拾方法：<ul>
+<li>方式一：简单的进行物品的码放以及打扫卫生，时间短；</li>
+<li>方式二：房屋装修与改造，时间长</li>
 </ul>
 </li>
 </ul>
+</li>
+<li><p>Java中数据保存的内存位置：堆内存（调优、原理）</p>
+<ul>
+<li>最需要强调的就是JDK1.8之后所带来的内存结构改变以及GC策略的提升</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/20190505103247.png" alt></p>
+<p><img src="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/20190505103340.png" alt></p>
+<p>当内存不足的时候，就需要进行伸缩区的控制，当内存充足的时候，就需要考虑将伸缩去所占的内存释放掉（收起），一定会造成额外的计算性能的影响，导致程序的整体性能下降。既然已经确定了当前可能是高并发的访问，并且我的程序独立的在一台服务器上，那么这台服务器的资源就应该全部给我去使用。</p>
+<p>MaxMemory：电脑内存的1/4；</p>
+<p>TotalMemory：电脑内存的1/64；</p>
+<p>伸缩去区 = MaxMemory - TotalMemory；</p>
+<p>程序执行的时候设置有相应的执行参数（-Xmx10G -Xms10G）：</p>
+<p>​        -Xms：分配的最大的初始化内存；</p>
+<p>​        -Xms：最大的分配内存；</p>
+<p>java -Xmx大小单位 -Xms大小单位 类文件</p>
+<p>1.空间的调整：伸缩区，线程池的大小</p>
+<p>2.GC执行分析</p>
+<p>3.垃圾回收策略</p>
+<h4 id="GC处理流程"><a href="#GC处理流程" class="headerlink" title="GC处理流程"></a>GC处理流程</h4><ul>
+<li><p>1.对象实例化需要依据关键字new完成，所有新对象都会在伊甸园区开辟，如果伊甸园区的内存空间不足会发生MinorGC</p>
+<ul>
+<li>Member mem= new Member()，很小，直接保存在伊甸园；</li>
+</ul>
+</li>
+<li><p>2.伊甸园区不是无限大的，所以肯定有些对象执行了N次的MinorGC后还会存在，那么这些对象将进入到存活区（存活区有两个，一个负责保存存活对象，一个负责晋升，永远都有一个空内存）；</p>
+</li>
+<li><p>3.如果经历过若干次的MinorGC回收处理之后发现空间依然不够使用的话，那么则进行老年代的GC回收。执行了一个MajarGC（Full GC，性能很差），如果可以回收空间，则继续进行MinorGC；</p>
+</li>
+<li><p>4.如果MajarGC失败，则继续内存已经占用完满，则抛出OOM异常</p>
+</li>
+<li><p>5.如果新创建的对象的空间占用过大将被直接保存到老年代中</p>
+<p>-XX:+PrintGCDetails</p>
+<p>JDK1.8会默认根据系统的硬件配置不同，则使用不同的GC策略，单核使用串行回收，多核使用并行回收</p>
+<p>JDK1.9~JDK1.11：使用的默认GC操作就是G1</p>
+</li>
+</ul>
+<h4 id="内存回收算法"><a href="#内存回收算法" class="headerlink" title="内存回收算法"></a>内存回收算法</h4><ul>
+<li>年轻代回收算法：<ul>
+<li>“复制”清理算法：将保留的对象复制到存活区之中，存活区的内容会保存到老年代之中；</li>
+<li>伊甸园区总是会有大量的新对象产生，所以HotSpot虚拟机使用了BTP（单一CPU的时代，所有的对象一次保存，相当于队列）、TLAB（拆分为不同的块，依据CPU的核心个数拆分）技术形式进行处理。</li>
+</ul>
+</li>
+<li>老年代回收算法：<ul>
+<li>“标记-清除”算法：先进行对象的第一次标记，在这段时间之呢内会暂停程序的执行（如果标记的时间长或者对象的内容过多），这个暂停的时间就会长；<ul>
+<li>就会产生串行标记、并行标记使用问题；</li>
+</ul>
+</li>
+<li>“标记-压缩”算法：基于“标记-清除”算法，将零散的内存空间进行整理重新集合在分配；</li>
+</ul>
+</li>
+</ul>
+<p>【年轻代】串行GC</p>
+<p>【年轻代】并行回收GC  ps</p>
+<p>【年轻代】并行GC</p>
+<p>【老年代】串行GC</p>
+<p>【老年代】并行GC</p>
+<p>【老年代】CMSGC：    解决挂起操作</p>
+<p>​                    STW（Stop The World）设计问题，暂时挂起所有的程序的执行线程，进行无用的对象标记</p>
+<p>没有任何一项合适的GC回收操作，从JDK1.8开始提供有G1收集器，在JDK11之后提供有ZGC。</p>
+<p>​                </p>
+<h4 id="G1算法"><a href="#G1算法" class="headerlink" title="G1算法"></a>G1算法</h4><ul>
+<li>支持大内存（4—64G）、支持有多CPU，减少STW停顿时间，可以保证并发状态下的程序执行。分块，每一块都有伊甸园区，老年代</li>
+<li><img src="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/20190505142810.png" alt></li>
+<li>JDK1.8 -XX：+UseG1GC 主流的应用模式</li>
+<li>JDK11之后，默认就是G1回收器，对于其他的回收算法实际上就可以忽略掉了</li>
+</ul>
+<p>Tomcat调优：</p>
+<p>JAVA_OPTS=”-Xms4096m -Xmx4096m -Xss1024k -XX:+UseG1GC”</p>
+<p>catalina.sh  </p>
+<p>jmap</p>
 
       
 
