@@ -6,15 +6,22 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="dns-prefetch" href="http://aerblight.github.io">
-  <title>Archives | Blog</title>
+  <title>Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
+  <meta name="description" content="JAVA内存模型为什么现在的开发中强调JVM 和当前的互联网开发环境有直接的关系；已经不再单独的面对传统的一台主机运行一些程序，而后在进行简单的维护，现在讲究的是：高并发、分布式、高可用，对于程序的调优里面就需要去考虑JVM参数设计、JUC的使用。 JAVA架构师（基础能力）：架构设计 + 通讯 + 多线程（JUC） + JVM + 数据结构 + 良好的结构设计（需要大量的代码基础）   需要清楚">
+<meta property="og:type" content="article">
 <meta property="og:title" content="Blog">
-<meta property="og:url" content="http://aerblight.github.io/archives/index.html">
+<meta property="og:url" content="http://aerblight.github.io/2019/05/05/JAVA内存模型/index.html">
 <meta property="og:site_name" content="Blog">
+<meta property="og:description" content="JAVA内存模型为什么现在的开发中强调JVM 和当前的互联网开发环境有直接的关系；已经不再单独的面对传统的一台主机运行一些程序，而后在进行简单的维护，现在讲究的是：高并发、分布式、高可用，对于程序的调优里面就需要去考虑JVM参数设计、JUC的使用。 JAVA架构师（基础能力）：架构设计 + 通讯 + 多线程（JUC） + JVM + 数据结构 + 良好的结构设计（需要大量的代码基础）   需要清楚">
 <meta property="og:locale" content="default">
+<meta property="og:image" content="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/java01.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/20190430155921.png">
+<meta property="og:updated_time" content="2019-04-30T08:54:35.850Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Blog">
+<meta name="twitter:description" content="JAVA内存模型为什么现在的开发中强调JVM 和当前的互联网开发环境有直接的关系；已经不再单独的面对传统的一台主机运行一些程序，而后在进行简单的维护，现在讲究的是：高并发、分布式、高可用，对于程序的调优里面就需要去考虑JVM参数设计、JUC的使用。 JAVA架构师（基础能力）：架构设计 + 通讯 + 多线程（JUC） + JVM + 数据结构 + 良好的结构设计（需要大量的代码基础）   需要清楚">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/java01.png">
   
     <link rel="alternative" href="/atom.xml" title="Blog" type="application/atom+xml">
   
@@ -150,70 +157,174 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-  
+            <article id="post-JAVA内存模型" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
     
-    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="JAVA内存模型"><a href="#JAVA内存模型" class="headerlink" title="JAVA内存模型"></a>JAVA内存模型</h1><h4 id="为什么现在的开发中强调JVM"><a href="#为什么现在的开发中强调JVM" class="headerlink" title="为什么现在的开发中强调JVM"></a>为什么现在的开发中强调JVM</h4><ul>
+<li>和当前的互联网开发环境有直接的关系；已经不再单独的面对传统的一台主机运行一些程序，而后在进行简单的维护，现在讲究的是：高并发、分布式、高可用，对于程序的调优里面就需要去考虑JVM参数设计、JUC的使用。<ul>
+<li>JAVA架构师（基础能力）：架构设计 + 通讯 + 多线程（JUC） + JVM + 数据结构 + 良好的结构设计（需要大量的代码基础）</li>
+</ul>
+</li>
+<li>需要清楚内存模型、虚拟机分类、运行模式</li>
+<li>不适当的JVM运行状态，有可能会浪费你电脑的性能、良好的JVM调优，可以增加你电脑处理的负载；</li>
+<li>GC处理流程以及常见的算法（JDK1.8、JDK1.9—JDK1.11）</li>
+</ul>
+<h4 id="JAVA程序执行流程"><a href="#JAVA程序执行流程" class="headerlink" title="JAVA程序执行流程"></a>JAVA程序执行流程</h4><p><img src="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/java01.png" alt></p>
+<h4 id="JAVA运行时数据区（内存问题）"><a href="#JAVA运行时数据区（内存问题）" class="headerlink" title="JAVA运行时数据区（内存问题）"></a>JAVA运行时数据区（内存问题）</h4><ul>
+<li>方法区：最重要的内存区域，多线程共享，保存了类的信息（名称、成员、接口、父类），反射机制是重要的组成部分，动态进行类操作的实现；</li>
+<li>堆内存（HEAP）：保存对象的真实信息，该内存牵扯到释放问题（GC）</li>
+<li>栈内存（Stack）：线程的私有空间，在每一次进行方法调用的时候，都会存在有栈帧，采用先进后出的设计原则：<ul>
+<li>本地变量表：局部参数或形参，允许保存有32位的solt，如果超过了32位的长度，就需要开辟两个连续性的solt（long、double）——volatile关键字的问题；</li>
+<li>操作数栈：执行所有的方法计算操作</li>
+<li>常量池的引用：String类、Integer类实例</li>
+<li>返回地址：方法执行完毕后的恢复执行的点</li>
+</ul>
+</li>
+<li>程序计数器：执行指令的一个顺序编码，该区域的所占比几乎可以忽略</li>
+<li>本地方法栈：与栈内存功能类似，区别在于是为本地方法服务的</li>
+</ul>
+<h4 id="递归操作与栈帧"><a href="#递归操作与栈帧" class="headerlink" title="递归操作与栈帧"></a>递归操作与栈帧</h4><p>迭代次数满了之后会出现异常StackOverflowError</p>
+<p><img src="https://raw.githubusercontent.com/aerblight/BlogPhoto/master/20190430155921.png" alt></p>
+<h4 id="JVM分类"><a href="#JVM分类" class="headerlink" title="JVM分类"></a>JVM分类</h4><ul>
+<li>Java是直接通过指针进行的程序访问，所以他没有采用句柄的形式操作，这样使得程序的性能更高。</li>
+<li>传统意义上来讲，JVM一共分为三中（虚拟机是一个公共标准）<ul>
+<li>【SUN】从JDK1.2开始使用了HotSpot虚拟机标准（2006年开源、利用C++实现、一些JNI部分使用的是系统提供的C程序实现的、JIT即时编译器）；</li>
+<li>【BEA】使用了JRockit虚拟机标准，例如：WebLogic；</li>
+<li>【IBM】开发了JVM‘s（J9）虚拟机；</li>
+</ul>
+</li>
+<li>Oracle后来通过收购得到了：SUN与BEA，那么Oracle有了两个虚拟机标准（不可能浪费两个研发团队去干同样的事情）；</li>
+</ul>
+<h4 id="HotSpot：Java-version"><a href="#HotSpot：Java-version" class="headerlink" title="HotSpot：Java -version"></a>HotSpot：Java -version</h4><ul>
+<li>获取信息<ul>
+<li>java version “11” 2018-09-25</li>
+<li>Java（TM）SE Runtime Environment 18.9（build 11+28）</li>
+<li>Java HostSpot（TM）64-Bit Servere VM 18.9 （build 11+28，mixed mode）</li>
+</ul>
+</li>
+<li>虚拟机提供的三种处理模式<ul>
+<li>混合模式：java -version；</li>
+<li>【禁用JIT】纯解释模式：java -Xint -version；</li>
+<li>纯编译模式：java -Xcomp -version</li>
+</ul>
+</li>
+<li>运行模式：<ul>
+<li>【client】客户端运行：启动速度快，但是中间程序的执行慢，占内存小</li>
+<li>【server】服务端运行：启动速度慢，占用内存多，执行效率高</li>
+<li>修改路径：content</li>
+</ul>
+</li>
+</ul>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
       
       
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/05/05/JAVA内存模型/" class="archive-article-date">
-  	<time datetime="2019-05-05T02:04:58.201Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-05-05</time>
-</a>
-        </div>
-    	 
-        <div class="article-info info-on-right">
-          
-          
+      
 
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=http://aerblight.github.io/2019/05/05/JAVA内存模型/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/04/28/hello-world/" class="archive-article-date">
-  	<time datetime="2019-04-28T03:36:32.755Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-04-28</time>
-</a>
+<nav id="article-nav">
+  
+  
+    <a href="/2019/04/28/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Hello World</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/04/28/hello-world/">Hello World</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
   
 
-    
+  
+
+  
 
 
           </div>
@@ -236,8 +347,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,
